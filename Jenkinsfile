@@ -10,20 +10,25 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                // Явно клонируем репозиторий
+                git branch: 'main', url: 'https://github.com/SharifzodaIqbol/reqres-api-automation.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t reqres-automation ."
+                // Проверяем, что Docker установлен
+                sh 'docker --version'
+
+                // Сборка Docker образа
+                sh 'docker build -t reqres-automation .'
             }
         }
 
         stage('Run Tests in Docker') {
             steps {
                 script {
-                    // Запускаем контейнер и прокидываем нужные переменные
+                    // Запускаем контейнер с переменными окружения
                     sh """
                         docker run --name test-container \
                         -e REQRES_API_KEY=${env.REQRES_API_KEY} \
@@ -37,10 +42,12 @@ pipeline {
     post {
         always {
             script {
-                // Сохраняем результаты Allure из контейнера
+                // Копируем результаты Allure из контейнера (если контейнер существует)
                 sh """
-                    docker cp test-container:/app/target/allure-results ./allure-results
-                    docker rm -f test-container
+                    if [ \$(docker ps -a -q -f name=test-container) ]; then
+                        docker cp test-container:/app/target/allure-results ./allure-results || echo "Allure results not found"
+                        docker rm -f test-container
+                    fi
                 """
 
                 // Определяем статус сборки
