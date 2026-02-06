@@ -11,7 +11,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 // Явно клонируем репозиторий
-                git branch: 'main', url: 'https://github.com/SharifzodaIqbol/reqres-api-automation.git'
+                git branch: 'master', url: 'https://github.com/SharifzodaIqbol/reqres-api-automation.git'
             }
         }
 
