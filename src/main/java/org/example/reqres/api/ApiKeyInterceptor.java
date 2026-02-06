@@ -8,8 +8,9 @@ import java.io.IOException;
 public class ApiKeyInterceptor implements Interceptor {
     @Override
     public Response intercept(Chain chain) throws IOException {
+        String apiKey = "reqres_99c69c7accc44aef8194e2cfa132bf4f";
         Request newRequest = chain.request().newBuilder()
-                .addHeader("x-api-key", "reqres_99c69c7accc44aef8194e2cfa132bf4f")
+                .addHeader("x-api-key", apiKey)
                 .addHeader("Content-Type", "application/json")
                 .build();
         return chain.proceed(newRequest);
