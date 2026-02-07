@@ -29,10 +29,6 @@ public class RegistrationTest {
     public void testSuccessfulRegistration() throws IOException{
         UserRequest request = new UserRequest("eve.holt@reqres.in", "pistol");
         Response<UserResponse> response = api.registerUser(request).execute();
-        System.out.println("Response code: " + response.code());
-        if (response.code() == 403) {
-            System.out.println("Error body: " + response.errorBody().string());
-        }
         assertThat(response.code()).isEqualTo(200);
         assertThat(response.body()).isNotNull();
         assertThat(response.body().getToken()).isNotEmpty();
