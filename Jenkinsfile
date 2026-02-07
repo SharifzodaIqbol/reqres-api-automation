@@ -19,8 +19,9 @@ pipeline {
                 script {
                     withCredentials([string(credentialsId: 'REQRES_API_TOKEN', variable: 'SECRET_KEY')]) {
                         sh """
-                            docker run --name test-container \
+                            docker run --rm \
                             -e REQRES_API_KEY=${SECRET_KEY} \
+                            -v \$WORKSPACE/allure-results:/app/target/allure-results \
                             reqres-automation
                         """
                     }
@@ -31,20 +32,13 @@ pipeline {
 
     post {
         always {
-            script {
-                sh """
-                    if [ \$(docker ps -a -q -f name=test-container) ]; then
-                        docker cp test-container:/app/target/allure-results ./allure-results || echo "Results not found"
-                        docker rm -f test-container
-                    fi
-                """
+            allure includeProperties: false, jdk: '', results: [[path: 'allure-results']]
 
-                allure includeProperties: false, jdk: '', results: [[path: 'allure-results']]
-
-                withCredentials([
-                    string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
-                    string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
-                ]) {
+            withCredentials([
+                string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
+                string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
+            ]) {
+                script {
                     def status = currentBuild.result ?: 'SUCCESS'
                     def icon = (status == 'SUCCESS') ? '✅ Автотесты успешно завершились!' : '❌ Автотесты не прошли!'
 
