@@ -32,10 +32,9 @@ pipeline {
     post {
         always {
             script {
-
                 sh """
                     if [ \$(docker ps -a -q -f name=test-container) ]; then
-                        docker cp test-container:/app/target/allure-results ./allure-results || echo "Allure results not found"
+                        docker cp test-container:/app/target/allure-results ./allure-results || echo "Results not found"
                         docker rm -f test-container
                     fi
                 """
@@ -47,11 +46,11 @@ pipeline {
                     string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
                 ]) {
                     def status = currentBuild.result ?: 'SUCCESS'
-                    def icon = (status == 'SUCCESS') ? '✅ Автотесты успешно завершились!' : '❌ Автотесты не прошли!' [cite: 10]
+                    def icon = (status == 'SUCCESS') ? '✅ Автотесты успешно завершились!' : '❌ Автотесты не прошли!'
 
                     sh """
-                        curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage \
-                        -d chat_id=${CHAT_ID} \
+                        curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage \\
+                        -d chat_id=${CHAT_ID} \\
                         -d text='${icon} Тест: ${env.JOB_NAME} [%23${env.BUILD_NUMBER}]%0AСтатус: ${status}%0AСсылка: ${env.BUILD_URL}'
                     """
                 }
