@@ -9,12 +9,12 @@ import java.io.IOException;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-public class RegistrationTest extends BaseTest {
+public class LoginTest extends BaseTest {
 
     @Test
-    public void testSuccessfulRegistration() throws IOException {
-        UserRequest request = new UserRequest("eve.holt@reqres.in", "pistol");
-        Response<UserResponse> response = api.registerUser(request).execute();
+    public void testSuccessfulLogin() throws IOException {
+        UserRequest request = new UserRequest("eve.holt@reqres.in", "cityslicka");
+        Response<UserResponse> response = api.loginUser(request).execute();
 
         assertThat(response.code()).isEqualTo(200);
         assertThat(response.body()).isNotNull();
@@ -22,9 +22,9 @@ public class RegistrationTest extends BaseTest {
     }
 
     @Test
-    public void testRegistrationWithoutPassword() throws IOException {
-        UserRequest request = new UserRequest("sydney@flandere", "");
-        Response<UserResponse> response = api.registerUser(request).execute();
+    public void testLoginWithoutPassword() throws IOException {
+        UserRequest request = new UserRequest("peter@klaven", "");
+        Response<UserResponse> response = api.loginUser(request).execute();
 
         assertThat(response.code()).isEqualTo(400);
     }
