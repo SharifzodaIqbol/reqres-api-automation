@@ -17,11 +17,12 @@ pipeline {
         stage('Run Tests in Docker') {
             steps {
                 script {
+                    sh 'rm -rf allure-results && mkdir allure-results'
+
                     withCredentials([string(credentialsId: 'REQRES_API_TOKEN', variable: 'SECRET_KEY')]) {
                         sh """
-                            docker run --rm \
+                            docker run --name test-container \
                             -e REQRES_API_KEY=${SECRET_KEY} \
-                            -v \$WORKSPACE/allure-results:/app/target/allure-results \
                             reqres-automation
                         """
                     }
@@ -32,7 +33,13 @@ pipeline {
 
     post {
         always {
-            allure includeProperties: false, jdk: '', results: [[path: 'allure-results']]
+            script {
+                sh 'docker cp test-container:/app/target/allure-results/. ./allure-results/ || true'
+
+                sh 'docker rm -f test-container || true'
+
+                allure includeProperties: false, jdk: '', results: [[path: 'allure-results']]
+            }
 
             withCredentials([
                 string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
@@ -45,7 +52,7 @@ pipeline {
                     sh """
                         curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage \\
                         -d chat_id=${CHAT_ID} \\
-                        -d text='${icon} Тест: ${env.JOB_NAME} [%23${env.BUILD_NUMBER}]%0AСтатус: ${status}%0AСсылка: ${env.BUILD_URL}'
+                        -d text='${icon} Тест: ${env.JOB_NAME} [#${env.BUILD_NUMBER}]%0AСтатус: ${status}%0AСсылка: ${env.BUILD_URL}'
                     """
                 }
             }
