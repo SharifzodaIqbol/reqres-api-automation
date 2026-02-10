@@ -2,12 +2,21 @@ openapi: 3.0.0
 info:
   title: Restful-booker API
   version: 1.0.0
+  description: API для автоматизации тестирования сервиса бронирования
+
+servers:
+  - url: https://restful-booker.herokuapp.com
+    description: Production сервер
+
 paths:
   /auth:
     post:
       summary: Создание токена
       operationId: createToken
+      tags:
+        - Authentication
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -19,10 +28,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Unauthorized - Неверные учетные данные
+
   /booking:
     get:
       summary: Получение списка ID бронирований
       operationId: getBookingIds
+      tags:
+        - Booking
       responses:
         '200':
           description: OK
@@ -35,7 +49,10 @@ paths:
     post:
       summary: Создание бронирования
       operationId: createBooking
+      tags:
+        - Booking
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -48,27 +65,108 @@ paths:
               schema:
                 $ref: '#/components/schemas/BookingResponse'
 
+  /booking/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID бронирования
+        schema:
+          type: integer
+    get:
+      summary: Получение бронирования по ID
+      operationId: getBooking
+      tags:
+        - Booking
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '404':
+          description: Not Found
+    put:
+      summary: Обновление бронирования
+      operationId: updateBooking
+      tags:
+        - Booking
+      parameters:
+        - name: Cookie
+          in: header
+          required: true
+          schema:
+            type: string
+            example: token=abc123456789
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Booking'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '403':
+          description: Forbidden
+    delete:
+      summary: Удаление бронирования
+      operationId: deleteBooking
+      tags:
+        - Booking
+      parameters:
+        - name: Cookie
+          in: header
+          required: true
+          schema:
+            type: string
+            example: token=abc123456789
+      responses:
+        '201':
+          description: Created (в данном API это статус успешного удаления)
+        '403':
+          description: Forbidden
+
 components:
   schemas:
     AuthRequest:
       type: object
+      required:
+        - username
+        - password
       properties:
         username:
           type: string
+          example: admin
         password:
           type: string
+          example: password123
+
     AuthResponse:
       type: object
       properties:
         token:
           type: string
+
     BookingId:
       type: object
       properties:
         bookingid:
           type: integer
+
     Booking:
       type: object
+      required:
+        - firstname
+        - lastname
+        - totalprice
+        - depositpaid
+        - bookingdates
       properties:
         firstname:
           type: string
@@ -79,12 +177,25 @@ components:
         depositpaid:
           type: boolean
         bookingdates:
-          type: object
-          properties:
-            checkin:
-              type: string
-            checkout:
-              type: string
+          $ref: '#/components/schemas/BookingDates'
+        additionalneeds:
+          type: string
+
+    BookingDates:
+      type: object
+      required:
+        - checkin
+        - checkout
+      properties:
+        checkin:
+          type: string
+          format: date
+          example: "2024-01-01"
+        checkout:
+          type: string
+          format: date
+          example: "2024-01-10"
+
     BookingResponse:
       type: object
       properties:
