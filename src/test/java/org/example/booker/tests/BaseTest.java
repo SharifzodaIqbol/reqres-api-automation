@@ -1,38 +1,48 @@
 package org.example.booker.tests;
 
-import org.example.booker.ApiClient;
-import org.example.booker.api.DefaultApi;
-import org.example.booker.model.AuthRequest;
-import org.example.booker.model.AuthResponse;
+import com.fatboyindustrial.gsonjavatime.Converters;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.logging.HttpLoggingInterceptor;
+import org.example.booker.api.BookingApi;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.TestInstance;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
-import java.io.IOException;
-
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class BaseTest {
-    protected static DefaultApi api;
-    protected static ApiClient apiClient;
+
+    protected BookingApi api;
 
     @BeforeAll
-    static void setup() throws IOException {
-        apiClient = new ApiClient();
-        apiClient.getAdapterBuilder().baseUrl("https://restful-booker.herokuapp.com/");
+    void setup() {
+        HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
+        logging.setLevel(HttpLoggingInterceptor.Level.BODY);
 
-        api = apiClient.createService(DefaultApi.class);
+        OkHttpClient client = new OkHttpClient.Builder()
+                .addInterceptor(logging)
+                .addInterceptor(chain -> {
+                    Request request = chain.request().newBuilder()
+                            .header("Content-Type", "application/json")
+                            .header("Accept", "application/json")
+                            .build();
+                    return chain.proceed(request);
+                })
+                .build();
 
-        authenticate();
-    }
+        Gson gson = Converters.registerAll(new GsonBuilder())
+                .setLenient()
+                .create();
 
-    private static void authenticate() throws IOException {
-        AuthRequest authRequest = new AuthRequest();
-        authRequest.setUsername("admin");
-        authRequest.setPassword("password123");
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("https://restful-booker.herokuapp.com")
+                .client(client)
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .build();
 
-        var response = api.createToken(authRequest).execute();
-
-        if (response.isSuccessful() && response.body() != null) {
-            String token = response.body().getToken();
-
-            apiClient.setApiKey(token);
-        }
+        api = retrofit.create(BookingApi.class);
     }
 }
