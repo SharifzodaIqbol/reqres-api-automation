@@ -18,9 +18,9 @@ pipeline {
             steps {
                 script {
                     sh 'rm -rf allure-results && mkdir allure-results'
-
-                    // Запуск контейнера без переменных REQRES_API_TOKEN
-                    sh 'docker run --name test-container reqres-automation'
+                    sh 'docker rm -f test-container || true'
+                    // Запуск тестов; || true гарантирует переход к блоку post при падении тестов
+                    sh 'docker run --name test-container reqres-automation || true'
                 }
             }
         }
@@ -29,31 +29,35 @@ pipeline {
     post {
         always {
             script {
-                // Копируем результаты из контейнера и удаляем его
+                // Копируем результаты и удаляем контейнер
                 sh 'docker cp test-container:/app/target/allure-results/. ./allure-results/ || true'
                 sh 'docker rm -f test-container || true'
 
-                // Формирование Allure отчета в Jenkins
+                // Генерация Allure
                 allure includeProperties: false, jdk: '', results: [[path: 'allure-results']]
 
-                // Подсчет результатов тестов из JSON файлов Allure
                 def total = 0
                 def passed = 0
                 def failed = 0
 
                 try {
-                    def files = findFiles(glob: 'allure-results/*-result.json')
-                    for (file in files) {
-                        def content = readJSON file: file.path
-                        total++
-                        if (content.status == 'passed') {
-                            passed++
-                        } else if (content.status == 'failed' || content.status == 'broken') {
-                            failed++
+                    // Используем стандартный путь Jenkins workspace
+                    def resultsPath = "${env.WORKSPACE}/allure-results"
+                    def resultsDir = new File(resultsPath)
+
+                    if (resultsDir.exists()) {
+                        resultsDir.eachFileMatch(~/.*-result\.json/) { file ->
+                            def text = file.getText("UTF-8")
+                            total++
+                            if (text.contains('"status":"passed"')) {
+                                passed++
+                            } else if (text.contains('"status":"failed"') || text.contains('"status":"broken"')) {
+                                failed++
+                            }
                         }
                     }
                 } catch (Exception e) {
-                    echo "Ошибка при подсчете результатов: ${e.message}"
+                    echo "Ошибка анализа файлов: " + e.getMessage()
                 }
 
                 withCredentials([
@@ -61,6 +65,7 @@ pipeline {
                     string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
                 ]) {
                     def status = currentBuild.result ?: 'SUCCESS'
+                    if (failed > 0) { status = 'FAILURE' }
 
                     def message = """
 Результаты тестов: ${status}
@@ -68,13 +73,13 @@ pipeline {
 Всего тестов: ${total}
 Успешно: ${passed}
 Ошибки: ${failed}
-Ссылка на билд: ${env.BUILD_URL}
+Ссылка: ${env.BUILD_URL}
 """.trim()
 
                     sh """
                         curl -s -X POST https://api.telegram.org/bot${BOT_TOKEN}/sendMessage \\
-                        -d chat_id=${CHAT_ID} \\
-                        -d text='${message}'
+                        --data-urlencode "chat_id=${CHAT_ID}" \\
+                        --data-urlencode "text=${message}"
                     """
                 }
             }
