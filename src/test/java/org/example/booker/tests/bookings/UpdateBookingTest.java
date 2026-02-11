@@ -4,7 +4,6 @@ import org.example.booker.model.Booking;
 import org.example.booker.model.BookingDates;
 import org.example.booker.model.BookingResponse;
 import org.example.booker.tests.BaseTest;
-import org.example.booker.tests.utils.ConfigReader;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

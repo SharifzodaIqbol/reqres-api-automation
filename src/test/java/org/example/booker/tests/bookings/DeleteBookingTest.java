@@ -1,7 +1,6 @@
 package org.example.booker.tests.bookings;
 
 import org.example.booker.tests.BaseTest;
-import org.example.booker.tests.utils.ConfigReader;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,7 +19,7 @@ public class DeleteBookingTest extends BaseTest {
     @Test
     @DisplayName("Удаление существующего бронирования")
     void deleteBookingTest() {
-        var createResponse = createBookingAndGetId(ConfigReader.getProperty("test.booking.firstname"));
+        var createResponse = createBookingAndGetId(CFG.bookingFirstname());
         Integer id = createResponse.body().getBookingid();
 
         var deleteResponse = execute(bookingApi.deleteBooking(id, fullCookie));
@@ -33,7 +32,7 @@ public class DeleteBookingTest extends BaseTest {
     @Test
     @DisplayName("Попытка удаления без токена")
     void deleteWithoutTokenTest() {
-        var createResponse = createBookingAndGetId(ConfigReader.getProperty("test.booking.firstname"));
+        var createResponse = createBookingAndGetId(CFG.bookingFirstname());
         Integer id = createResponse.body().getBookingid();
 
         var deleteResponse = execute(bookingApi.deleteBooking(id, ""));

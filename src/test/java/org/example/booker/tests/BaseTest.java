@@ -6,13 +6,14 @@ import com.google.gson.GsonBuilder;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.logging.HttpLoggingInterceptor;
+import org.aeonbits.owner.ConfigFactory;
 import org.example.booker.api.AuthenticationApi;
 import org.example.booker.api.BookingApi;
 import org.example.booker.model.AuthRequest;
 import org.example.booker.model.Booking;
 import org.example.booker.model.BookingDates;
 import org.example.booker.model.BookingResponse;
-import org.example.booker.tests.utils.ConfigReader;
+import org.example.booker.tests.utils.AppConfig;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import retrofit2.Call;
@@ -28,6 +29,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class BaseTest {
 
+    protected static final AppConfig CFG = ConfigFactory.create(AppConfig.class);
+
     protected BookingApi bookingApi;
     protected AuthenticationApi authApi;
 
@@ -40,8 +43,8 @@ public class BaseTest {
                 .addInterceptor(logging)
                 .addInterceptor(chain -> {
                     Request request = chain.request().newBuilder()
-                            .header("Content-Type", ConfigReader.getProperty("content.type"))
-                            .header("Accept", ConfigReader.getProperty("accept.header"))
+                            .header("Content-Type", CFG.contentType())
+                            .header("Accept", CFG.acceptHeader())
                             .build();
                     return chain.proceed(request);
                 })
@@ -52,7 +55,7 @@ public class BaseTest {
                 .create();
 
         Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(ConfigReader.getProperty("base.url"))
+                .baseUrl(CFG.baseUrl())
                 .client(client)
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .build();
@@ -65,41 +68,41 @@ public class BaseTest {
         try {
             Response<T> response = call.execute();
             if (response.code() >= 500) {
-                throw new AssertionError(ConfigReader.getMessage("error.server",
+                throw new AssertionError(String.format(CFG.errorServer(),
                         response.code(), response.errorBody().string()));
             }
             return response;
         } catch (IOException e) {
-            throw new AssertionError(ConfigReader.getMessage("error.network") + e.getMessage(), e);
+            throw new AssertionError(CFG.errorNetwork() + e.getMessage(), e);
         }
     }
 
     protected Response<BookingResponse> createBookingAndGetId(String firstname) {
         Booking body = new Booking()
                 .firstname(firstname)
-                .lastname(ConfigReader.getProperty("test.booking.lastname"))
-                .totalprice(Integer.valueOf(ConfigReader.getProperty("test.booking.price")))
+                .lastname(CFG.bookingLastname())
+                .totalprice(CFG.bookingPrice())
                 .depositpaid(true)
                 .bookingdates(new BookingDates().checkin(LocalDate.now()).checkout(LocalDate.now().plusDays(7)))
-                .additionalneeds(ConfigReader.getProperty("test.booking.additional"));
+                .additionalneeds(CFG.bookingAdditional());
 
         return execute(bookingApi.createBooking(body));
     }
 
     protected String getAuthToken() {
         AuthRequest auth = new AuthRequest()
-                .username(ConfigReader.getProperty("auth.username"))
-                .password(ConfigReader.getProperty("auth.password"));
+                .username(CFG.username())
+                .password(CFG.password());
 
         var response = execute(authApi.createToken(auth));
 
         assertThat(response.isSuccessful())
-                .withFailMessage(ConfigReader.getMessage("error.auth.fail", response.code()))
+                .withFailMessage(String.format(CFG.errorAuthFail(), response.code()))
                 .isTrue();
 
         String token = response.body().getToken();
         assertThat(token)
-                .withFailMessage(ConfigReader.getMessage("error.auth.token_empty"))
+                .withFailMessage(CFG.errorAuthTokenEmpty())
                 .isNotBlank();
 
         return token;
