@@ -19,7 +19,7 @@ pipeline {
                 script {
                     sh 'rm -rf allure-results && mkdir allure-results'
                     sh 'docker rm -f test-container || true'
-                    // Запуск тестов; || true гарантирует переход к блоку post при падении тестов
+
                     sh 'docker run --name test-container reqres-automation || true'
                 }
             }
@@ -29,11 +29,9 @@ pipeline {
     post {
         always {
             script {
-                // Копируем результаты и удаляем контейнер
                 sh 'docker cp test-container:/app/target/allure-results/. ./allure-results/ || true'
                 sh 'docker rm -f test-container || true'
 
-                // Генерация Allure
                 allure includeProperties: false, jdk: '', results: [[path: 'allure-results']]
 
                 def total = 0
@@ -41,31 +39,31 @@ pipeline {
                 def failed = 0
 
                 try {
-                    // Используем стандартный путь Jenkins workspace
-                    def resultsPath = "${env.WORKSPACE}/allure-results"
-                    def resultsDir = new File(resultsPath)
+                    // Проверяем наличие файлов, чтобы избежать ошибок в консоли
+                    def hasFiles = sh(script: 'ls allure-results/*-result.json >/dev/null 2>&1 && echo "yes" || echo "no"', returnStdout: true).trim()
 
-                    if (resultsDir.exists()) {
-                        resultsDir.eachFileMatch(~/.*-result\.json/) { file ->
-                            def text = file.getText("UTF-8")
-                            total++
-                            if (text.contains('"status":"passed"')) {
-                                passed++
-                            } else if (text.contains('"status":"failed"') || text.contains('"status":"broken"')) {
-                                failed++
-                            }
-                        }
+                    if (hasFiles == "yes") {
+
+                        total = sh(script: 'ls allure-results/*-result.json | wc -l', returnStdout: true).trim().toInteger()
+
+                        passed = sh(script: 'grep -l \'"status":"passed"\' allure-results/*-result.json | wc -l', returnStdout: true).trim().toInteger()
+
+                        failed = sh(script: 'grep -lE \'"status":"(failed|broken)"\' allure-results/*-result.json | wc -l', returnStdout: true).trim().toInteger()
                     }
                 } catch (Exception e) {
-                    echo "Ошибка анализа файлов: " + e.getMessage()
+                    echo "Ошибка подсчета: ${e.message}"
                 }
 
+                // 4. Отправляем уведомление в Telegram
                 withCredentials([
                     string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
                     string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
                 ]) {
+                    // Устанавливаем статус для сообщения
                     def status = currentBuild.result ?: 'SUCCESS'
-                    if (failed > 0) { status = 'FAILURE' }
+                    if (failed > 0 || status == 'FAILURE') {
+                        status = 'FAILURE'
+                    }
 
                     def message = """
 Результаты тестов: ${status}
