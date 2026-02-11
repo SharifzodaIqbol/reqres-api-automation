@@ -8,7 +8,7 @@ public class ConfigReader {
     private static final Properties properties = new Properties();
     private static final String NOT_FOUND =  "Not found: ";
     static {
-        loadProperties(properties, "test.properties");
+        loadProperties(properties, "message.properties");
     }
 
     private static void loadProperties(Properties prop, String fileName) {
