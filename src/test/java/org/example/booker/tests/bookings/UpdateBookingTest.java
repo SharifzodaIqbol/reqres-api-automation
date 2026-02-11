@@ -2,12 +2,10 @@ package org.example.booker.tests.bookings;
 
 import org.example.booker.model.Booking;
 import org.example.booker.model.BookingDates;
-import org.example.booker.model.BookingResponse;
 import org.example.booker.tests.BaseTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import retrofit2.Response;
 
 import java.time.LocalDate;
 
@@ -28,9 +26,7 @@ public class UpdateBookingTest extends BaseTest {
         LocalDate checkinDate = LocalDate.now();
         LocalDate checkoutDate = LocalDate.now().plusDays(3);
 
-        Response<BookingResponse> createResponse = createBookingAndGetId(
-                ConfigReader.getProperty("test.booking.firstname")
-        );
+        var createResponse = createBookingAndGetId(CFG.bookingFirstname());
 
         Integer id = createResponse.body().getBookingid();
         Booking updateData = createResponse.body().getBooking();
@@ -58,9 +54,7 @@ public class UpdateBookingTest extends BaseTest {
     @Test
     @DisplayName("Частичное обновление")
     void partialUpdate() {
-        Response<BookingResponse> createResponse = createBookingAndGetId(
-                ConfigReader.getProperty("test.booking.firstname")
-        );
+        var createResponse = createBookingAndGetId(CFG.bookingFirstname());
         Integer id = createResponse.body().getBookingid();
 
         Booking patchData = createResponse.body().getBooking();
